@@ -36,6 +36,19 @@ webroot/               WebUI：开关 / 换源 / 镜像 / 尺寸 / 重启相机
 本地编译：先把 ShadowHook 源码放到 `third_party/shadowhook`，再
 `cd zygisk && ./build.sh`（需 NDK r25+）。
 
+## 已修复的编译问题（日志4）
+- `fatal error: 'android/media/NdkMediaCodec.h' file not found` →
+  NDK 的 media 头**全部**在 `<media/NdkXxx.h>`（sysroot/usr/include/media/），
+  `android/media/...` 是 AOSP frameworks 路径，NDK sysroot 没有。日志3 只暴露了
+  `android/image_reader.h`，日志4 修完第一个后暴露了剩下两个。现已统一改为
+  `<media/NdkImageReader.h>` / `<media/NdkMediaCodec.h>` /
+  `<media/NdkMediaExtractor.h>`，并显式加 `<media/NdkMediaFormat.h>`
+  （`AMediaFormat_*` 与 `AMEDIAFORMAT_KEY_*` 真正定义处）。
+- 验证方式升级：不再用"随便摆的桩"，而是按 **NDK sysroot 真实目录布局**
+  （`android/`、`media/`、`sys/`）重建头文件桩后跑 `g++ -fsyntax-only`，
+  include 路径写错会当场失败。当前通过（EXIT=0）。
+  ShadowHook 源码筛选在日志4 中已验证正确（C 文件全部编译通过，无报错）。
+
 ## 已修复的编译问题（日志3）
 - `fatal error: android/image_reader.h not found` → NDK 中 AImageReader 头是
   `<media/NdkImageReader.h>`，`android/image_reader.h` 是 AOSP 平台头，NDK sysroot 没有。

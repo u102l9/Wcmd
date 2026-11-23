@@ -12,9 +12,12 @@
 
 #include <android/log.h>
 #include <android/native_window.h>
-#include <media/NdkImageReader.h>      // AImageReader (NDK 标准头; android/image_reader.h 是 AOSP 头, NDK 无)
-#include <android/media/NdkMediaCodec.h>
-#include <android/media/NdkMediaExtractor.h>
+// NDK 的 media 头全部在 <media/NdkXxx.h>（sysroot/usr/include/media/），
+// AOSP 里才是 android/media/... 和 android/image_reader.h，NDK sysroot 没有后者。
+#include <media/NdkImageReader.h>
+#include <media/NdkMediaCodec.h>
+#include <media/NdkMediaExtractor.h>
+#include <media/NdkMediaFormat.h>      // AMediaFormat_* / AMEDIAFORMAT_KEY_* 真正定义处
 #include <sys/system_properties.h>
 #include <cstring>
 #include <string>

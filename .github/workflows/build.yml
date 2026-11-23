@@ -54,6 +54,13 @@ jobs:
           SO=$(find build -maxdepth 1 \( -name 'arm64-v8a.so' -o -name 'libarm64-v8a.so' \) | head -1)
           test -n "$SO" || { echo "未产出 arm64-v8a.so"; exit 1; }
           cp "$SO" arm64-v8a.so
+          # best-effort：确认导出了 Zygisk 入口符号，只警告不阻断打包
+          NM="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
+          if [ -x "$NM" ]; then
+            "$NM" -D arm64-v8a.so | grep -E "zygisk_init|zygisk_module_entry" \
+              && echo "Zygisk entry OK" \
+              || echo "WARNING: 未找到 Zygisk 入口符号，刷入后模块可能不加载"
+          fi
 
       - name: Package flashable zip
         run: |
