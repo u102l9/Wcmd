@@ -36,6 +36,22 @@ webroot/               WebUI：开关 / 换源 / 镜像 / 尺寸 / 重启相机
 本地编译：先把 ShadowHook 源码放到 `third_party/shadowhook`，再
 `cd zygisk && ./build.sh`（需 NDK r25+）。
 
+## 已修复的编译问题（日志3）
+- `fatal error: android/image_reader.h not found` → NDK 中 AImageReader 头是
+  `<media/NdkImageReader.h>`，`android/image_reader.h` 是 AOSP 平台头，NDK sysroot 没有。
+- ShadowHook 的 `arch/arm/sh_inst.c` 报 `sh_util_get_arm_cpu_features` 未声明 →
+  上一版 `GLOB_RECURSE` 从仓库根抓 `.c`，把 demo/unittest/32位源码全编进来了。
+  现在只取 `shadowhook/src/main/cpp` 核心 + `arch/arm64` + `common` + `third_party`。
+- 隐藏错误：`static const char* MEDIA_DIR` 与 `"/virtual.mp4"` 做字面量拼接在
+  C++ 非法 → 改成宏。
+- 隐藏错误：`add_library(SHARED)` 默认带 `lib` 前缀，产物会是
+  `libarm64-v8a.so`，workflow 里 `cp build/arm64-v8a.so` 必然失败 → 设 `PREFIX ""`。
+- 顺手修解码器：configure 的 format 不能设 `video/raw`（那是输出格式），
+  改按 extractor 实际 mime 创建 decoder；`setDataSourceFd` 传真实文件长度。
+
+本地已用 NDK 头桩对完整 `module.cpp` 做过 `g++ -fsyntax-only` 校验通过，
+并模拟验证过 CMake 源码筛选不会再把 demo/32位代码编进来。
+
 ## 使用
 1. KernelSU Next 刷入 zip，重启。
 2. 把 `virtual.mp4`(H.264, 建议 1280x720) 放到 `/sdcard/VirtualCam/`，

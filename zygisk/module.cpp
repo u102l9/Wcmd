@@ -12,10 +12,9 @@
 
 #include <android/log.h>
 #include <android/native_window.h>
-#include <android/image_reader.h>
+#include <media/NdkImageReader.h>      // AImageReader (NDK 标准头; android/image_reader.h 是 AOSP 头, NDK 无)
 #include <android/media/NdkMediaCodec.h>
 #include <android/media/NdkMediaExtractor.h>
-#include <android/data_space.h>
 #include <sys/system_properties.h>
 #include <cstring>
 #include <string>
@@ -51,8 +50,10 @@ static std::atomic<bool> g_enabled{false};
 static std::atomic<bool> g_stop{false};
 static int g_sdk = 0;
 
-static const char* CFG_DIR = "/data/adb/VirtualCam";
-static const char* MEDIA_DIR = "/sdcard/VirtualCam";
+// 必须是宏/字面量：代码里有 MEDIA_DIR "/virtual.mp4" 这种编译期拼接，
+// 用 const char* 变量在 C++ 里是非法的（上一版这里会编译失败）。
+#define CFG_DIR   "/data/adb/VirtualCam"
+#define MEDIA_DIR "/sdcard/VirtualCam"
 
 static bool is_disabled() {
     if (access(MEDIA_DIR "/disable", F_OK) == 0) return true;
@@ -110,27 +111,31 @@ namespace framesrc {
             int fd = open(MEDIA_DIR "/virtual.mp4", O_RDONLY);
             if (fd < 0) { usleep(500000); continue; }
             AMediaExtractor* ex = AMediaExtractor_new();
-            if (AMediaExtractor_setDataSourceFd(ex, fd, 0, 0) != AMEDIA_OK) {
+            off_t flen = lseek(fd, 0, SEEK_END);
+            if (flen > 0) lseek(fd, 0, SEEK_SET);
+            if (AMediaExtractor_setDataSourceFd(ex, fd, 0, flen > 0 ? flen : 0) != AMEDIA_OK) {
                 close(fd); AMediaExtractor_delete(ex); usleep(500000); continue; }
             size_t ntracks = AMediaExtractor_getTrackCount(ex);
             int vidx = -1;
+            std::string vmime = "video/avc";
             for (size_t i = 0; i < ntracks; i++) {
                 AMediaFormat* f = AMediaExtractor_getTrackFormat(ex, i);
                 const char* mime = nullptr;
                 AMediaFormat_getString(f, AMEDIAFORMAT_KEY_MIME, &mime);
-                if (mime && strncmp(mime, "video/", 6) == 0) vidx = (int)i;
+                if (mime && strncmp(mime, "video/", 6) == 0) {
+                    vidx = (int)i;
+                    vmime = mime;   // 拷贝, mime 指针随 format 释放失效
+                }
                 AMediaFormat_delete(f);
                 if (vidx >= 0) break;
             }
             if (vidx < 0) { close(fd); AMediaExtractor_delete(ex); usleep(500000); continue; }
             AMediaExtractor_selectTrack(ex, vidx);
 
+            // configure 的 format 描述"输入(压缩)格式", 不是输出 raw; 设 video/raw 会直接失败
             AMediaFormat* fmt = AMediaFormat_new();
-            AMediaFormat_setString(fmt, AMEDIAFORMAT_KEY_MIME, "video/raw");
-            AMediaFormat_setInt32(fmt, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21 /*YUV420Flexible*/);
-            AMediaFormat_setInt32(fmt, AMEDIAFORMAT_KEY_WIDTH, want_w);
-            AMediaFormat_setInt32(fmt, AMEDIAFORMAT_KEY_HEIGHT, want_h);
-            AMediaCodec* codec = AMediaCodec_createDecoderByType("video/avc");
+            AMediaFormat_setString(fmt, AMEDIAFORMAT_KEY_MIME, vmime.c_str());
+            AMediaCodec* codec = AMediaCodec_createDecoderByType(vmime.c_str());
             if (!codec) { AMediaFormat_delete(fmt); close(fd); AMediaExtractor_delete(ex); usleep(500000); continue; }
             if (AMediaCodec_configure(codec, fmt, nullptr, nullptr, 0) != AMEDIA_OK) {
                 AMediaFormat_delete(fmt); AMediaCodec_delete(codec); close(fd); AMediaExtractor_delete(ex); usleep(500000); continue; }
