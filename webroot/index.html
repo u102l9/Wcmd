@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VirtualCam</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>VirtualCam <span class="ver">Zygisk</span></h1>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="t">摄像头拦截</div>
+        <div class="s" id="stateText">读取中…</div>
+      </div>
+      <label class="sw"><input type="checkbox" id="toggle"><i></i></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="t">替换源</div>
+    <div class="s">视频放 /sdcard/VirtualCam/virtual.mp4，图片放 photo.jpg / front.jpg</div>
+    <div class="btns">
+      <button id="pickVideo">选择视频</button>
+      <button id="pickPhoto">选择拍照图</button>
+      <button id="pickFront">选择前摄图</button>
+    </div>
+    <div class="s" id="mediaInfo"></div>
+    <div class="row" style="margin-top:8px">
+      <div><div class="t">预览尺寸</div><div class="s">与目标App一致,如 1280x720</div></div>
+      <input id="sizeInput" placeholder="1280x720" style="width:120px;text-align:right">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div><div class="t">前摄镜像</div><div class="s">前置画面水平翻转</div></div>
+      <label class="sw"><input type="checkbox" id="mirror"><i></i></label>
+    </div>
+    <div class="row">
+      <div><div class="t">重启相机进程</div><div class="s">改源后若没生效点一下</div></div>
+      <button id="restart">重启相机</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="t">日志</div>
+    <pre id="log">—</pre>
+  </div>
+  <p class="foot">仅用于测试 / 隐私 / 直播推流。Root 环境有风控，请用小号。</p>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

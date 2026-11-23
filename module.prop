@@ -1,0 +1,8 @@
+id=VirtualCamKSU
+name=VirtualCam (Zygisk)
+version=v0.1.0
+versionCode=1
+author=VirtualCam
+description=纯 Zygisk 虚拟摄像头：KernelSU Next 下 Hook Camera2 NDK，用视频/图片替换前后摄画面。WebUI 实时开关与换源。仅用于测试/隐私/直播推流。
+zygisk=true
+webuiIcon=https://raw.githubusercontent.com/topjohnwu/zygisk-module-sample/master/module/README.md

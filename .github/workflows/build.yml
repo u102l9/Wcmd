@@ -1,0 +1,58 @@
+name: Build VirtualCam KSU module
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 关键修复：第三方库用 checkout action 拉取（带 GITHUB_TOKEN，可稳定读公开仓库），
+      # 不让 CMake 的 FetchContent 在子构建里做匿名 git clone（会因缺凭据报
+      # "could not read Username for https://github.com"）。
+      - name: Checkout ShadowHook source
+        uses: actions/checkout@v4
+        with:
+          repository: bytedance/android-inline-hook
+          path: third_party/shadowhook
+          submodules: recursive
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with: { ndk-version: "r26d", add-to-path: true }
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with: { cmake-version: "3.30.x" }
+
+      - name: Build arm64-v8a.so (Zygisk + ShadowHook)
+        working-directory: zygisk
+        run: |
+          export ANDROID_NDK_ROOT=${{ steps.ndk.outputs.ndk-path }}
+          test -d ../third_party/shadowhook || { echo "ShadowHook source missing"; exit 1; }
+          cmake -S . -B build \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_NATIVE_API_LEVEL=29 \
+            -DANDROID_STL=c++_static \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+          cp build/arm64-v8a.so arm64-v8a.so
+
+      - name: Package flashable zip
+        run: |
+          mkdir -p dist/VirtualCamKSU/zygisk
+          cp -r module.prop customize.sh service.sh post-fs-data.sh sepolicy.rule webroot dist/VirtualCamKSU/
+          cp zygisk/arm64-v8a.so dist/VirtualCamKSU/zygisk/
+          cd dist && zip -r ../VirtualCamKSU.zip VirtualCamKSU
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VirtualCamKSU
+          path: VirtualCamKSU.zip

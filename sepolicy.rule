@@ -1,0 +1,8 @@
+# 相机服务/提供商进程需要读取模块配置与 /sdcard/VirtualCam 素材
+# SELinux Enforcing 下没有这些规则，原生侧 open() 会被拒
+allow cameraserver system_data_file:file { read open getattr };
+allow cameraserver system_data_file:dir { search read open getattr };
+allow vendor_qti_camera_provider system_data_file:file { read open getattr };
+allow vendor_qti_camera_provider system_data_file:dir { search read open getattr };
+allow cameraserver media_rw_data_file:file { read open getattr };
+allow vendor_qti_camera_provider media_rw_data_file:file { read open getattr };
